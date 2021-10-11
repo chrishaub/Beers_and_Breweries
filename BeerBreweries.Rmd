@@ -1,0 +1,149 @@
+---
+title: "BeerBreweries"
+author: "Haub"
+date: "10/11/2021"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+library(ggplot2)
+library(magrittr)  #Pipe library
+library(plotly)
+library(GGally)
+library(tidyverse)
+library(maps)
+library(dplyr)
+library(mapproj)
+library(data.table)
+library(knitr)
+
+
+#Inspecting the files
+head(Beers)
+head(Breweries)
+
+#Renaming Beers DF col "Brew_ID" to "Brewery_ID"
+colnames(Beers) [colnames(Beers)=="Brew_ID"] <- "Brewery_id"
+
+# 1. How many breweries are present in each state?
+```{r}
+breweries_state <- data.table(table(Breweries$State))
+breweries_state
+kable(breweries_state)
+
+```
+
+# 2. Merge beer data with the breweries data. 
+```{r}
+#merging the Breweries and Beers DF together on Brewery_id, pg.136
+merged_df <- merge(Breweries,Beers, by ="Brewery_id")
+
+colnames(merged_df)[colnames(merged_df)=="Name.x"] <- "Brewery"
+colnames(merged_df)[colnames(merged_df)=="Name.y"] <- "Beer"
+
+#print the first & last 6 observations, used kniter kable to generate table, 
+#pipe used by default w markdown file
+kable(head(merged_df,6))
+kable(tail(merged_df,6))
+
+```
+
+# 3. Address the missing values in each column.
+```{r}
+#number of NA's in the df, ABV 62, IBU 1005, no NA's in other columns
+kable(colSums(is.na(merged_df)), col.names=c("Count"))
+
+#df %>% filter(!is.na(Years)) #Only returns valus that are complete records
+
+```
+
+# 4. Compute the median alcohol content and international bitterness unit for each state. 
+```{r}
+#find the median ABV
+
+#code fr unit 3 will not run
+#merged_df %>% group_by(State) %>% summarize(median_ABV = median(ABV, na.rm = TRUE)
+                                            
+#merged_df %>% group_by(State) %>% summarize(median_IBU = median(IBU, na.rm = TRUE)
+
+#median ABV's by state 
+median_ABV <- aggregate(ABV ~ State, merged_df, median)
+#median IBU's by state
+median_IBU <- aggregate(IBU ~ State, merged_df, median)
+
+#bar chart for median ABV's by state
+median_ABV <- aggregate(ABV ~ State, merged_df, FUN = median)
+barplot(median_ABV$ABV, 
+        space = .50, 
+        xlab = "State", 
+        ylab = "ABV %", 
+        main = "Median ABV by State", 
+        names.arg = median_ABV$State, 
+        las=3)
+
+#bar chart for median IBU's by state
+median_IBU <- aggregate(IBU ~ State, merged_df, FUN = median)
+barplot(median_IBU$IBU, 
+        space = .25, 
+        xlab = "State", 
+        ylab = "IBU %", 
+        main = "Median IBU by State", 
+        names.arg = median_IBU$State, 
+        las=3)
+
+```
+
+# 5. Which state has the maximum alcoholic (ABV) beer? Which state has the most bitter (IBU) beer?
+```{r}
+#State with highest ABV, CO
+kable(merged_df$State[which.max(merged_df$ABV)])
+
+#State with highest IBU, OR
+kable(merged_df$State[which.max(merged_df$IBU)])
+
+```
+
+# 6. Comment on the summary statistics and distribution of the ABV variable.
+```{r}
+summary(merged_df$ABV)
+
+#Lowest ABV is 0.1%, highest is 12.8%. Mean is 5.98% (average), median is 5.6% (middle). Due to large sample #skew, median is most likely a more accurate representation of the data.
+
+```
+
+
+
+
+
+
+                                            
+
+                                            
+                            
+
+
