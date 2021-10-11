@@ -135,6 +135,16 @@ summary(merged_df$ABV)
 #Lowest ABV is 0.1%, highest is 12.8%. Mean is 5.98% (average), median is 5.6% (middle). Due to large sample #skew, median is most likely a more accurate representation of the data.
 
 ```
+# 7. Is there an apparent relationship between the bitterness of the beer and its alcoholic content? 
+```{r}
+#scatter plot
+ggplot(merged_df, aes(x=IBU, y=ABV)) + geom_point() + geom_smooth(method=lm)
+
+#correlation test
+cor.test(merged_df$ABV,merged_df$IBU)
+
+
+```
 
 
 
