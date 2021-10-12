@@ -41,17 +41,31 @@ library(dplyr)
 library(mapproj)
 library(data.table)
 library(knitr)
+library(mice)
 
 
-#Inspecting the files
+# Inspecting the files
+```{r}
 head(Beers)
 head(Breweries)
 
-#Renaming Beers DF col "Brew_ID" to "Brewery_ID"
-colnames(Beers) [colnames(Beers)=="Brew_ID"] <- "Brewery_id"
+```
+
+# Creating data frame
+```{r}
+df1 = data.frame(table(Breweries$State))
+colnames(df1) = c("State","Breweries")
+df1 = df1[order(-df1$Breweries),]
+view(df1)
+row.names(df1) = NULL
+view(df1)
+
+```
+
 
 # 1. How many breweries are present in each state?
 ```{r}
+# Used the data.table function to find number of breweries per state. Used the knitr kable function to view.
 breweries_state <- data.table(table(Breweries$State))
 breweries_state
 kable(breweries_state)
@@ -60,44 +74,47 @@ kable(breweries_state)
 
 # 2. Merge beer data with the breweries data. 
 ```{r}
-#merging the Breweries and Beers DF together on Brewery_id, pg.136
-merged_df <- merge(Breweries,Beers, by ="Brewery_id")
-
-colnames(merged_df)[colnames(merged_df)=="Name.x"] <- "Brewery"
-colnames(merged_df)[colnames(merged_df)=="Name.y"] <- "Beer"
-
-#print the first & last 6 observations, used kniter kable to generate table, 
-#pipe used by default w markdown file
-kable(head(merged_df,6))
-kable(tail(merged_df,6))
+# Merged the Breweries and Beers DF together on Brewery_id. 
+merged = merge(x = Beers4, y = Breweries, by.x = "Brewery_id", by.y = "Brew_ID", all=TRUE)
+merged = merge(x = Beers4, y = Breweries, by.x = "Brewery_id", by.y = "Brew_ID", all.x=TRUE)
+view(merged)
+merged = merged %>% rename(Beer = Name.x,Brewery = Name.y)
+head(merged,6)
+tail(merged,6)
 
 ```
 
 # 3. Address the missing values in each column.
 ```{r}
-#number of NA's in the df, ABV 62, IBU 1005, no NA's in other columns
-kable(colSums(is.na(merged_df)), col.names=c("Count"))
+#ABV and IBU Columns contain missing values. ABV column contains 62 missing values and IBU column contains #1005 missing values. Since ABV contains smaller number of missing values, we can use state level medians to #replace those values. IBU contains lot of missing values, Because of that we use a predictive regression #model to predict IBU value based on ABV.**
 
-#df %>% filter(!is.na(Years)) #Only returns valus that are complete records
+# Plotted the missing values.
+plot_missing(merged)
+
+# Missing values replaced.
+sum(is.na(merged))
+which(is.na(merged)) 
+
+for(i in 1:ncol(merged)){
+  merged[is.na(merged[,i]), i] <- mean(merged[,i], na.rm = TRUE)
+}
+
+plot_missing(merged)
 
 ```
 
 # 4. Compute the median alcohol content and international bitterness unit for each state. 
 ```{r}
-#find the median ABV
+# ABV has a mean of 5.97%, with a median of 5.7%. The maximum ABV is 12.8%, the minimum ABV is .1%.
+# IBU has a mean of 42.71, with a median of 42.71. The maximum IBU is 138, the minimum IBU is 4.
 
-#code fr unit 3 will not run
-#merged_df %>% group_by(State) %>% summarize(median_ABV = median(ABV, na.rm = TRUE)
-                                            
-#merged_df %>% group_by(State) %>% summarize(median_IBU = median(IBU, na.rm = TRUE)
+#Median ABV's by state.
+median_ABV <- aggregate(ABV ~ State, merged, median)
+#Median IBU's by state.
+median_IBU <- aggregate(IBU ~ State, merged, median)
 
-#median ABV's by state 
-median_ABV <- aggregate(ABV ~ State, merged_df, median)
-#median IBU's by state
-median_IBU <- aggregate(IBU ~ State, merged_df, median)
-
-#bar chart for median ABV's by state
-median_ABV <- aggregate(ABV ~ State, merged_df, FUN = median)
+#Bar chart for median ABV's by state.
+median_ABV <- aggregate(ABV ~ State, merged, FUN = median)
 barplot(median_ABV$ABV, 
         space = .50, 
         xlab = "State", 
@@ -106,8 +123,8 @@ barplot(median_ABV$ABV,
         names.arg = median_ABV$State, 
         las=3)
 
-#bar chart for median IBU's by state
-median_IBU <- aggregate(IBU ~ State, merged_df, FUN = median)
+#Bar chart for median IBU's by state.
+median_IBU <- aggregate(IBU ~ State, merged, FUN = median)
 barplot(median_IBU$IBU, 
         space = .25, 
         xlab = "State", 
@@ -116,32 +133,77 @@ barplot(median_IBU$IBU,
         names.arg = median_IBU$State, 
         las=3)
 
+# Summary of statistics for the data set.  
+summary(merged)
+
 ```
 
 # 5. Which state has the maximum alcoholic (ABV) beer? Which state has the most bitter (IBU) beer?
 ```{r}
-#State with highest ABV, CO
-kable(merged_df$State[which.max(merged_df$ABV)])
+# Colorado has the Maximum ABV at 12.8%
+# Oregon has the Maximum IBU at 13.8%
 
-#State with highest IBU, OR
-kable(merged_df$State[which.max(merged_df$IBU)])
+# State with highest ABV, CO.
+kable(merged_df$State[which.max(merged$ABV)])
+
+# State with highest IBU, OR.
+kable(merged_df$State[which.max(merged$IBU)])
+
+# Displays figures for state with highest ABV and IBU.
+df2=data.frame(merged$State,merged$ABV,merged$IBU)
+colnames(df2)=c("State","ABV","IBU")
+view(df2)
+summarise(df2,max=max(ABV))
+row.names(df2) = NULL
+df2 = df2[order(-df2$ABV),]
+head(df2)[1,]
+
+summarise(df2,max=max(IBU))
+df2 = df2[order(-df2$IBU),]
+head(df2)[1,]
 
 ```
 
 # 6. Comment on the summary statistics and distribution of the ABV variable.
 ```{r}
-summary(merged_df$ABV)
 
-#Lowest ABV is 0.1%, highest is 12.8%. Mean is 5.98% (average), median is 5.6% (middle). Due to large sample #skew, median is most likely a more accurate representation of the data.
+# Lowest ABV is 0.1%, highest is 12.8%. Mean is 5.98% (average), median is 5.6% (middle). Due to large  
+# sample skew, median is most likely a more accurate representation of the data.
+summary(merged$ABV)
+
+#P value does not have normal distribution as it is very small (non normal distribution). Skewed away fr mean.
+shapiro.test(merged$ABV)
+
 
 ```
 # 7. Is there an apparent relationship between the bitterness of the beer and its alcoholic content? 
 ```{r}
-#scatter plot
-ggplot(merged_df, aes(x=IBU, y=ABV)) + geom_point() + geom_smooth(method=lm)
+# .52 correlation, some correlation between the bitterness of beer and it's alcoholic content, however it is # not strong (scale -1 to 1).
 
-#correlation test
-cor.test(merged_df$ABV,merged_df$IBU)
+# Scatter plot
+ggplot(merged, aes(x=IBU, y=ABV)) + geom_point() + geom_smooth(method=lm)
+
+# Histogram
+ggplot(merged, aes(x = ABV)) + 
+  geom_histogram(color="blue", fill="skyblue") +
+  theme_bw() +
+  ggtitle("Histogram for ABV")
+
+# Scatter plot
+ggplot(df2, aes(x = ABV, y = IBU)) + 
+  geom_point(color = "blue")+
+  geom_smooth(method = "lm",se = F, color = "red")+
+  ggtitle("Scatterplot for ABV vs IBU") + 
+  theme_bw()
+
+summary(merged$ABV)
+
+
+# Correlation test, 
+cor.test(merged$ABV,merged$IBU)
+
+cor.test(merged$ABV,merged$IBU,method ="spearman")
+
 
 
 ```
