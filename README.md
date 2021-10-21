@@ -22,3 +22,5 @@ We analyzed and provided answers to the following questions:
 
 8.   Budweiser would also like to investigate the difference with respect to IBU and ABV between IPAs (India Pale Ales) and other types of Ale (any beer with “Ale” in its name        other than IPA).  
 
+## Outcome
+The Rmarkdown file contains the results of our analyis to the previous questions as well as additional insights we gained in looking at the data.
