@@ -18,7 +18,7 @@ We analyzed and provided answers to the following questions:
 
 6.   Comment on the summary statistics and distribution of the ABV variable.
 
-7.   Is there an apparent relationship between the bitterness of the beer and its alcoholic content? Draw a scatter plot?
+7.   Is there an apparent relationship between the bitterness of the beer and its alcoholic content? 
 
 8.   Budweiser would also like to investigate the difference with respect to IBU and ABV between IPAs (India Pale Ales) and other types of Ale (any beer with “Ale” in its name        other than IPA).  
 
