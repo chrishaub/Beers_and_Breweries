@@ -11,38 +11,82 @@ editor_options:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
-```{r cars}
-summary(cars)
-```
 
-## Including Plots
 
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
-
-library(ggplot2)
-library(magrittr)  #Pipe library
-library(plotly)
-library(GGally)
+# Call in libraries
+```{r, message=FALSE, warning=FALSE, out.width="100%"}
 library(tidyverse)
-library(maps)
-library(dplyr)
-library(mapproj)
+library(gridExtra)
+library(class)
+library(usmap)
+library(ggplot2)
+library(foreign)
+library(haven)
+library(ggplot2)
+library(foreign)
+library(ggplot2)
+library(GGally)
+library(haven)
+library(magrittr)
 library(data.table)
-library(knitr)
+library(dplyr)
+library(plyr)
+library(dplyr)
+library(factoextra)
+library(ggplot2)
+library(ggmap)
+library(nycflights13)
+library(tidyverse)
+library(datasets)
+library(readxl)
+library(tidyverse) 
+library(magrittr)
+library(DataExplorer)
+library(maps)
+library(plotly)
+library(DT)
+library(tidytext)
+library(plyr)
+library(gridExtra)
+library(factoextra)
+library(GGally)
+library(readxl)
+library(tidyverse) 
+library(magrittr)
+library(DataExplorer)
+library(maps)
+library(plotly)
+library(DT)
+library(tidytext)
+library(gridExtra)
+library(factoextra)
+library(GGally)
+library(gridExtra)
+library(graphics)
 library(mice)
+library(PerformanceAnalytics)
+require(PerformanceAnalytics)
+library(MASS)
+library(reshape)
+library(RJSONIO)
+library(jsonlite)
+library(twitteR)
+library(maps)
+library(mapproj)
+library(knitr)
+```
 
+
+# Load in the files
+```{r}
+Beers = read.csv("/Users/chris/OneDrive/Desktop/SMU data science/New folder/MSDS_6306_Doing-Data-Science/Beers_and_Breweries/Beers.csv")
+
+Breweries = read.csv("/Users/chris/OneDrive/Desktop/SMU data science/New folder/MSDS_6306_Doing-Data-Science/Beers_and_Breweries/Breweries.csv")
+
+```
 
 # Inspecting the files
 ```{r}
@@ -56,9 +100,9 @@ head(Breweries)
 df1 = data.frame(table(Breweries$State))
 colnames(df1) = c("State","Breweries")
 df1 = df1[order(-df1$Breweries),]
-view(df1)
+#view(df1)
 row.names(df1) = NULL
-view(df1)
+#view(df1)
 
 ```
 
@@ -67,18 +111,28 @@ view(df1)
 ```{r}
 # Used the data.table function to find number of breweries per state. Used the knitr kable function to view.
 breweries_state <- data.table(table(Breweries$State))
-breweries_state
+
 kable(breweries_state)
+
+# Heat map showing number of breweries in each state. Colorado has the most, California has second most.
+df1$state = trimws(as.character(df1$State))
+p = plot_usmap(data = df1, values = "Breweries",labels = TRUE, color = "red") + 
+  scale_fill_continuous(low = "white", high = "red", 
+                        name = "Breweries", label = scales::comma) + 
+  theme(legend.position = "right")
+
+p$layers[[2]]$aes_params$size <- 2.5
+p
 
 ```
 
 # 2. Merge beer data with the breweries data. 
-```{r}
+
+```{r, message=FALSE, warning=FALSE, out.width="100%"}
 # Merged the Breweries and Beers DF together on Brewery_id. 
-merged = merge(x = Beers4, y = Breweries, by.x = "Brewery_id", by.y = "Brew_ID", all=TRUE)
-merged = merge(x = Beers4, y = Breweries, by.x = "Brewery_id", by.y = "Brew_ID", all.x=TRUE)
-view(merged)
-merged = merged %>% rename(Beer = Name.x,Brewery = Name.y)
+merged = merge(x = Beers, y = Breweries, by.x = "Brewery_id", by.y = "Brew_ID", all.x = TRUE)
+Beer = merged$Name.x
+Brewery=merged$Name.y
 head(merged,6)
 tail(merged,6)
 
@@ -86,7 +140,7 @@ tail(merged,6)
 
 # 3. Address the missing values in each column.
 ```{r}
-#ABV and IBU Columns contain missing values. ABV column contains 62 missing values and IBU column contains #1005 missing values. Since ABV contains smaller number of missing values, we can use state level medians to #replace those values. IBU contains lot of missing values, Because of that we use a predictive regression #model to predict IBU value based on ABV.**
+# ABV and IBU Columns contain missing values. ABV column contains 62 missing values and IBU column contains 1,005 missing values. Since ABV contains smaller number of missing values, we can use state level medians to replace those values. IBU contains lot of missing values, Because of that we use a predictive regression model to predict IBU value based on ABV.
 
 # Plotted the missing values.
 plot_missing(merged)
@@ -108,12 +162,12 @@ plot_missing(merged)
 # ABV has a mean of 5.97%, with a median of 5.7%. The maximum ABV is 12.8%, the minimum ABV is .1%.
 # IBU has a mean of 42.71, with a median of 42.71. The maximum IBU is 138, the minimum IBU is 4.
 
-#Median ABV's by state.
+# Median ABV's by state.
 median_ABV <- aggregate(ABV ~ State, merged, median)
-#Median IBU's by state.
+# Median IBU's by state.
 median_IBU <- aggregate(IBU ~ State, merged, median)
 
-#Bar chart for median ABV's by state.
+# Bar chart for median ABV's by state.
 median_ABV <- aggregate(ABV ~ State, merged, FUN = median)
 barplot(median_ABV$ABV, 
         space = .50, 
@@ -123,7 +177,7 @@ barplot(median_ABV$ABV,
         names.arg = median_ABV$State, 
         las=3)
 
-#Bar chart for median IBU's by state.
+# Bar chart for median IBU's by state.
 median_IBU <- aggregate(IBU ~ State, merged, FUN = median)
 barplot(median_IBU$IBU, 
         space = .25, 
@@ -140,27 +194,42 @@ summary(merged)
 
 # 5. Which state has the maximum alcoholic (ABV) beer? Which state has the most bitter (IBU) beer?
 ```{r}
-# Colorado has the Maximum ABV at 12.8%
-# Oregon has the Maximum IBU at 13.8%
+# Colorado has the Maximum ABV at 12.8%.
+# Oregon has the Maximum IBU at 13.8%.
 
-# State with highest ABV, CO.
-kable(merged_df$State[which.max(merged$ABV)])
-
-# State with highest IBU, OR.
-kable(merged_df$State[which.max(merged$IBU)])
 
 # Displays figures for state with highest ABV and IBU.
-df2=data.frame(merged$State,merged$ABV,merged$IBU)
-colnames(df2)=c("State","ABV","IBU")
-view(df2)
-summarise(df2,max=max(ABV))
-row.names(df2) = NULL
-df2 = df2[order(-df2$ABV),]
-head(df2)[1,]
+df2=subset(merged,select=c("State","ABV","IBU"))
+# State with highest ABV, CO
+maxABV=subset(df2,ABV==max(ABV,na.rm = TRUE))
+maxABV
+# State with highest IBU, OR
+maxIBU=subset(df2,IBU==max(IBU,na.rm = TRUE))
+maxIBU
 
-summarise(df2,max=max(IBU))
-df2 = df2[order(-df2$IBU),]
-head(df2)[1,]
+ABV.max = aggregate(ABV ~ State, data = merged, FUN = max)
+ABV.max[order(-ABV.max$ABV),][1,]
+
+IBU.max = aggregate(IBU ~ State, data = merged, FUN = max)
+IBU.max[order(-IBU.max$IBU),][1,]
+
+# Plot top 5 states with maximum ABV
+abv = ABV.max[order(-ABV.max$ABV),][1:5,]
+ggplot(abv, aes(x = ABV*100, y = reorder(State,ABV))) + 
+  geom_bar(stat = "identity", width = 0.5, color = "orange", fill = "gold") +
+  labs(title = "Top 5 States with maximum ABV values", y = "State", x = "ABV percentage") + 
+  theme_bw()+
+  geom_text(aes(label = paste0(ABV*100,"%"))) +
+  theme(text = element_text(size = 10))
+
+# Plot top 5 states with maximum IBU
+ibu = IBU.max[order(-IBU.max$IBU),][1:5,]
+ggplot(ibu, aes(x = IBU, y = reorder(State,IBU))) + 
+  geom_bar(stat = "identity", width = 0.5, color = "orange", fill = "gold") +
+  labs(title = "Top 5 States with maximum IBU values", y ="State") + 
+  theme_bw()+
+  geom_text(aes(label = IBU)) +
+  theme(text = element_text(size = 10))
 
 ```
 
@@ -171,14 +240,14 @@ head(df2)[1,]
 # sample skew, median is most likely a more accurate representation of the data.
 summary(merged$ABV)
 
-#P value does not have normal distribution as it is very small (non normal distribution). Skewed away fr mean.
+# P value does not have normal distribution as it is very small (non normal distribution). Skewed away fr mean.
 shapiro.test(merged$ABV)
 
-
 ```
+
 # 7. Is there an apparent relationship between the bitterness of the beer and its alcoholic content? 
 ```{r}
-# .52 correlation, some correlation between the bitterness of beer and it's alcoholic content, however it is # not strong (scale -1 to 1).
+# .52 correlation, some correlation between the bitterness of beer and it's alcoholic content, however it is not strong (scale -1 to 1).
 
 # Scatter plot
 ggplot(merged, aes(x=IBU, y=ABV)) + geom_point() + geom_smooth(method=lm)
@@ -198,15 +267,222 @@ ggplot(df2, aes(x = ABV, y = IBU)) +
 
 summary(merged$ABV)
 
-
-# Correlation test, 
+# Correlation test 
 cor.test(merged$ABV,merged$IBU)
 
-cor.test(merged$ABV,merged$IBU,method ="spearman")
-
-
-
 ```
+
+# 8.  Budweiser would also like to investigate the difference with respect to IBU and ABV between IPAs (India Pale Ales) and other types of Ale (any beer with “Ale” in its name other than IPA).  You decide to use KNN classification to investigate this relationship. Provide statistical evidence one way or the other.
+```{r, message=FALSE, warning=FALSE, out.width="100%"}
+minDF = subset(merged, select = c("ABV","IBU","Style","State"),
+               is.na(ABV) == FALSE & is.na(IBU) == FALSE)
+
+minDF$S1 = NA
+
+for(k in 1:nrow(minDF))
+{
+  if(grepl("IPA", minDF$Style[k], fixed = TRUE) == TRUE)
+  {
+    minDF$S1[k] = "IPA"
+  }
+  else if(grepl("Ale", minDF$Style[k], fixed = TRUE) == TRUE)
+  {
+    minDF$S1[k] = "Ale"
+  }
+}
+```
+
+```{r, message=FALSE, warning=FALSE, out.width="100%"}
+
+clsdf = subset(minDF, select = c("ABV","IBU","S1","State"), is.na(S1) == FALSE)
+clsdf = dplyr::rename(clsdf,Style = S1)
+```
+
+# Scatterplot graphing the relationship of ABV and IBU in terms of Ale and IPA
+```{r, message=FALSE, warning=FALSE, out.width="100%"}
+ggplot(clsdf,aes(ABV,IBU,color=Style))+
+  geom_point(shape=4,size=2)+
+  geom_smooth(method=loess,se=F)
+```
+
+# Box plot of ABV in Ale and IPA
+```{r, message=FALSE, warning=FALSE, out.width="100%"}
+ggplot(clsdf,aes(Style,ABV,fill=Style))+geom_boxplot()
+```
+
+# Box plot of IBU in Ale and IPA
+```{r, message=FALSE, warning=FALSE, out.width="100%"}
+ggplot(clsdf,aes(Style,IBU,fill=Style))+geom_boxplot()
+```
+
+# The relationship between IBU and ABV in terms of Style(Ale,IPA)
+```{r, message=FALSE, warning=FALSE, out.width="100%"}
+ggplot(clsdf,aes(ABV,IBU,color=Style))+
+  geom_point(shape=4,size=2)+
+geom_smooth(method=lm,se=F)
+```
+
+# To Compare Two Variances
+```{r, message=FALSE, warning=FALSE, out.width="100%"}
+var.test(IBU~Style,data=clsdf)
+```
+
+# Two variance were different
+```{r, message=FALSE, warning=FALSE, out.width="100%"}
+ale=subset(clsdf,Style=="Ale")
+ipa=subset(clsdf,Style=="IPA")
+```
+
+# To test normality of the variables
+```{r, message=FALSE, warning=FALSE, out.width="100%"}
+shapiro.test(ale$IBU)
+shapiro.test(ipa$IBU)
+shapiro.test(ale$ABV)
+shapiro.test(ipa$ABV)
+# The variables do not have a normal distribution
+```
+
+
+# Plot the normality of the variables
+```{r, message=FALSE, warning=FALSE, out.width="100%"}
+qqnorm(ale$IBU)
+qqnorm(ale$ABV)
+qqnorm(ipa$IBU)
+qqnorm(ipa$ABV)
+```
+
+# Test the difference between ABV in different styles(IPA and Ale), we should use Mann Whiteny test
+```{r, message=FALSE, warning=FALSE, out.width="100%"}
+wilcox.test(clsdf$ABV ~ clsdf$Style)
+# ABV and Style had a significant difference
+```
+#ABV and Style had a significant difference
+
+```{r, message=FALSE, warning=FALSE, out.width="100%"}
+wilcox.test(clsdf$IBU ~ clsdf$Style)
+# IBU and Style had a significant difference
+```
+
+# Using KNN:
+```{r, message=FALSE, warning=FALSE, out.width="100%"}
+clsdf = subset(clsdf, select = c("ABV","IBU","Style"))
+idx = sample.int(n = nrow(clsdf), size = floor(0.7*nrow(clsdf)), replace = F)
+train = clsdf[idx,]
+test = clsdf[-idx,]
+trn_target = train$Style
+trn = train[,-3]
+tst_target = test$Style
+tst = test[,-3]
+
+pred = knn(train = trn, test = tst, cl = trn_target, k = 6)
+```
+
+
+```{r, message=FALSE, warning=FALSE, out.width="100%"}
+head(pred)
+```
+
+# To show confusion matrix:
+```{r, message=FALSE, warning=FALSE, out.width="100%"}
+model_table=table(tst_target,pred)
+model_table
+```
+
+# To test the accuracy:
+```{r, message=FALSE, warning=FALSE, out.width="100%"}
+sum(diag(model_table))/nrow(tst)
+```
+
+```{r, message=FALSE, warning=FALSE, out.width="100%"}
+Accuracy = NULL
+mis = NULL
+sen = NULL
+spe = NULL
+
+for(i in 1:50)
+{
+  pred = knn(train = trn, test = tst, cl = trn_target, k = i)
+  head(pred)
+  model_table=table(trn_target)
+  tab = table(Predicted = pred, Real = tst_target)
+  Accuracy[i] = ((tab[1,1] + tab[2,2])/sum(tab))*100
+  mis[i] = round((tab[1,2]+tab[2,1])/sum(tab),2)
+  sen[i] = round(tab[2,2]/(tab[2,2]+tab[1,2]),2)
+  spe[i] = round(tab[1,1]/(tab[1,1]+tab[2,1]),2)
+}
+```
+
+```{r, message=FALSE, warning=FALSE, out.width="100%"}
+plot(x = c(1:50), y = Accuracy, xlab = "k", pch = 19, type = "b")
+abline(v = which.max(Accuracy), col = "red", lwd = 2)
+```
+
+```{r, message=FALSE, warning=FALSE, out.width="100%"}
+data.frame(Measure = c("Accuracy","Misclassification Rate","Sensitivity","Specificity"),
+           Value = c(round(Accuracy[6],2),round(mis[6],2),round(sen[6],2),round(spe[6],2)))
+```
+
+# 9.Find one other useful inference from the data that you feel Budweiser may be able to find value in. 
+```{r, message=FALSE, warning=FALSE, out.width="100%"}
+# Median ounce per state, Colorado had the most followed by California.
+oz = aggregate(Ounces ~ State, data = merged, FUN = sum)
+ggplot(oz, aes(x = Ounces, y = reorder(State,Ounces))) + 
+  geom_bar(stat = "identity", width = 0.5, color = "blue", fill = "skyblue") +
+  labs(title = "Median Ounces per State", y = " Ounces") + 
+  theme_bw() + 
+  theme(text = element_text(size = 8.1))
+```
+```{r, message=FALSE, warning=FALSE, out.width="100%"}
+co = subset(merged, State == " CO")
+```
+
+```{r, message=FALSE, warning=FALSE, out.width="100%"}
+# Number of ounces for cities in Colorado
+oz_co = aggregate(Ounces ~ City, data = co, FUN = sum)
+
+ggplot(oz_co, aes(x = Ounces, y = reorder(City,Ounces))) + 
+  geom_bar(stat = "identity", width = 0.5, color = "blue", fill = "skyblue") +
+  labs(title = "Number of Ounces for Cities in Colorado", y = " Ounces")  + 
+  theme_bw() +
+  theme(text = element_text(size = 8.1))
+```
+
+# To evaluate the relationship between Ounces in different cities of Colorado
+```{r, message=FALSE, warning=FALSE, out.width="100%"}
+Anova_result= aov(Ounces ~ City, data = co)
+summary(Anova_result)
+```
+
+```{r, message=FALSE, warning=FALSE, out.width="100%"}
+minDF1 = subset(co, select = c("Ounces","Style"),is.na(Ounces) == FALSE)
+minDF1$S1 = NA
+for(k in 1:nrow(minDF1))
+{
+  if(grepl("IPA", minDF1$Style[k], fixed = TRUE) == TRUE)
+  {
+    minDF1$S1[k] = "IPA"
+  }
+  else if(grepl("Ale", minDF1$Style[k], fixed = TRUE) == TRUE)
+  {
+    minDF1$S1[k] = "Ale"
+  }
+}
+aggregate(Ounces ~ S1, data = minDF1, FUN = sum)
+```
+
+# Test Normality of Ounces
+```{r, message=FALSE, warning=FALSE, out.width="100%"}
+shapiro.test(minDF1$Ounces)
+qqnorm(minDF1$Ounces)
+```
+
+# Evaluation of the Ounces between two styles(IPA and Ale) in different cities in Colorado
+```{r, message=FALSE, warning=FALSE, out.width="100%"}
+wilcox.test(minDF1$Ounces ~ minDF1$S1)
+# The difference between ounces and styles was not significant
+```
+
+
 
 
 
